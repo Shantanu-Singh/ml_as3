@@ -232,6 +232,17 @@ def em_scores(X_scaled, y):
     plt.clf()
 
 
+
+def km_plot(X):
+
+    km = KMeans(n_clusters=5, n_init=20, max_iter=500, random_state=0)
+    y_kmeans = km.fit_predict(X)
+
+    plt.scatter(X[:, 0], X[:, 1], c=y_kmeans, cmap='rainbow')
+    plt.show()
+
+
+
 if __name__ == "__main__":
     X_train, X_test, y_train, y_test, X, y = load_wave_data()
 
@@ -239,8 +250,10 @@ if __name__ == "__main__":
 
     X_scaled = scaler.fit_transform(X)
 
+    km_plot(X_scaled)
+
     # kmeans_1(X_scaled)
     # em_1(X)
 
     # kmeans_scores(X_scaled, y)
-    em_scores(X, y)
+    # em_scores(X, y)
