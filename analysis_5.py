@@ -26,7 +26,7 @@ def load_wave_data():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0, test_size=0.20)
 
-    return X, y
+    return X, y, X_train, X_test, y_train, y_test
 
 
 def base_mlp(X, y):
@@ -67,6 +67,8 @@ def base_mlp(X, y):
     # plt.ylim(0, )
     plt.savefig('Base_MLP_LC_4.png')
     plt.clf()
+
+    return total
 
 
 def pca_mlp(X, y):
@@ -111,6 +113,8 @@ def pca_mlp(X, y):
     plt.savefig('PCA_MLP_LC_2.png')
     plt.clf()
 
+    return total
+
     # mse1 = np.mean((X_train - X_projected)**2)
     # mse = np.sum(mse1)/21
     # print('MSE for dataset 1: ', mse)
@@ -120,8 +124,9 @@ def ica_mlp(X, y):
 
     start = time.time()
 
-    ica = FastICA(n_components=15)
+    ica = FastICA(n_components=15, max_iter=10000, tol=0.01)
     X_ica = ica.fit_transform(X)
+    # print(ica.n_iter_)
 
     train_sizes = [50, 100, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000]
     cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
@@ -157,6 +162,8 @@ def ica_mlp(X, y):
     # plt.ylim(0, )
     plt.savefig('ICA_MLP_LC_2.png')
     plt.clf()
+
+    return total
 
 
 def rp_mlp(X, y):
@@ -201,6 +208,8 @@ def rp_mlp(X, y):
     plt.savefig('RP_MLP_LC_2.png')
     plt.clf()
 
+    return total
+
 
 def tsvd_mlp(X, y):
 
@@ -244,32 +253,7 @@ def tsvd_mlp(X, y):
     plt.savefig('TSVD_MLP_LC_2.png')
     plt.clf()
 
-
-def km_mlp_1(X_train, X_test, y_train, y_test):
-
-    scaler = MinMaxScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.fit_transform(X_test)
-
-    model = MLPClassifier(hidden_layer_sizes=(40,),
-                                  max_iter=10000,
-                                  activation='relu',
-                                  solver='adam',
-                                  random_state=0)
-    model.fit(X_train, y_train)
-    print(model.score(X_test, y_test))
-
-    pipeline = Pipeline([
-        ("kmeans", KMeans(n_clusters=3)),
-        ("model", MLPClassifier(hidden_layer_sizes=(40,),
-                                  max_iter=10000,
-                                  activation='relu',
-                                  solver='adam',
-                                  random_state=0)),
-    ])
-    pipeline.fit(X_train_scaled, y_train)
-
-    print(pipeline.score(X_test_scaled, y_test))
+    return total
 
 
 def km_mlp(X, y):
@@ -314,6 +298,7 @@ def km_mlp(X, y):
     # plt.ylim(0, )
     plt.savefig('KM_MLP_LC_2.png')
     plt.clf()
+    return total
 
 
 def em_mlp(X, y):
@@ -359,23 +344,88 @@ def em_mlp(X, y):
     plt.savefig('EM_MLP_LC_2.png')
     plt.clf()
 
+    return total
+
+
+def plot_accuracy(X_train, X_test, y_train, y_test):
+
+    model = MLPClassifier(hidden_layer_sizes=(40,),
+                                  max_iter=10000,
+                                  activation='relu',
+                                  solver='adam',
+                                  random_state=0)
+    model.fit(X_train, y_train)
+    print("MLP base accuracy : ", model.score(X_test, y_test))
+
+    pca = PCA(n_components=19)
+    X_pca_train = pca.fit_transform(X_train)
+    X_pca_test = pca.fit_transform(X_test)
+
+    model.fit(X_pca_train, y_train)
+    print("PCA + MLP accuracy : ", model.score(X_pca_test, y_test))
+
+    ica = FastICA(n_components=15, max_iter=10000, tol=0.01)
+    X_ica_train = ica.fit_transform(X_train)
+    X_ica_test = ica.fit_transform(X_test)
+
+    model.fit(X_ica_train, y_train)
+    print("ICA + MLP accuracy : ", model.score(X_ica_test, y_test))
+
+    rp = GaussianRandomProjection(n_components=21)
+    X_rp_train = rp.fit_transform(X_train)
+    X_rp_test = rp.fit_transform(X_test)
+
+    model.fit(X_rp_train, y_train)
+    print("RP + MLP accuracy : ", model.score(X_rp_test, y_test))
+
+    tsvd = TruncatedSVD(n_components=20)
+    X_tsvd_train = tsvd.fit_transform(X_train)
+    X_tsvd_test = tsvd.fit_transform(X_test)
+
+    model.fit(X_tsvd_train, y_train)
+    print("TSVD + MLP accuracy : ", model.score(X_tsvd_test, y_test))
+
+    kmeans = KMeans(n_clusters=2)
+    X_km_train = kmeans.fit_transform(X_train)
+    X_km_test = kmeans.fit_transform(X_test)
+
+    model.fit(X_km_train, y_train)
+    print("KM + MLP accuracy : ", model.score(X_km_test, y_test))
+
+    em = GaussianMixture(n_components=4, n_init=10, max_iter=500, random_state=0).fit(X)
+    X_em_train = em.predict_proba(X_train)
+    X_em_test = em.predict_proba(X_test)
+
+    model.fit(X_em_train, y_train)
+    print("EM + MLP accuracy : ", model.score(X_em_test, y_test))
+
+
+def plot_time(X, y):
+
+    times = []
+
+    times.append(base_mlp(X, y))
+    times.append(pca_mlp(X, y))
+    times.append(ica_mlp(X, y))
+    times.append(rp_mlp(X, y))
+    times.append(tsvd_mlp(X, y))
+    times.append(km_mlp(X, y))
+    times.append(em_mlp(X, y))
+
 
 
 if __name__ == "__main__":
 
-    X, y, = load_wave_data()
+    X, y, X_train, X_test, y_train, y_test = load_wave_data()
 
     scaler = MinMaxScaler()
-    X = scaler.fit_transform(X)
-    # base_mlp(X, y)
+    X_scaled = scaler.fit_transform(X)
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.fit_transform(X_test)
 
-    # km_mlp_1(X_train, X_test, y_train, y_test)
-    pca_mlp(X, y)
-    ica_mlp(X, y)
-    rp_mlp(X, y)
-    tsvd_mlp(X, y)
-    km_mlp(X, y)
-    em_mlp(X, y)
+    plot_time(X_scaled, y)
+
+    plot_accuracy(X_train_scaled, X_test_scaled, y_train, y_test)
 
 
 
