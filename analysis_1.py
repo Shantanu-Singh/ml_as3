@@ -1,14 +1,11 @@
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score, v_measure_score, homogeneity_score, completeness_score
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score
+from sklearn.metrics import adjusted_rand_score, mutual_info_score
 from sklearn.mixture import GaussianMixture
-# from time import time
 import time
 
 
@@ -22,24 +19,29 @@ def load_wave_data():
 
     y = df['V22'].values
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0, test_size=0.20)
-
-    # sss = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
-    #
-    # for train_index, test_index in sss.split(X, y):
-    #     print("TRAIN:", train_index, "TEST:", test_index)
-    #     X_train, X_test = X[train_index], X[test_index]
-    #     y_train, y_test = y[train_index], y[test_index]
-
-    return X_train, X_test, y_train, y_test, X, y
+    return X, y
 
 
-def kmeans_1(X):
+def load_vehicle_data():
+
+    df = pd.read_csv("dataset_54_vehicle.csv")
+
+    X = df.drop(columns=['Class'])
+
+    lb_make = LabelEncoder()
+    df['Class'] = lb_make.fit_transform(df['Class'])
+
+    y = df['Class'].values
+
+    return X, y
+
+
+def kmeans_elbow(X, dataset):
     sse = []
-    list_k = list(range(2, 15))
+    list_k = list(range(2, 10))
 
     for k in list_k:
-        km = KMeans(n_clusters=k, n_init=20, max_iter=500, random_state=0)
+        km = KMeans(n_clusters=k)
         km.fit(X)
         sse.append(km.inertia_)
 
@@ -48,18 +50,19 @@ def kmeans_1(X):
     plt.figure(figsize=(12, 8))
     plt.plot(list_k, sse, '-o')
     plt.xlabel('Number of clusters')
-    plt.ylabel('Sum of squared distance')
-    plt.savefig('Kmeans_elbow-1.png')
+    plt.ylabel('Inertia')
+    filename = 'KM_elbow_' + dataset + '.png'
+    plt.savefig(filename)
     plt.clf()
 
 
-def em_1(X_scaled):
+def em_elbow(X_scaled, dataset):
     bic = []
     aic = []
-    list_k = list(range(1, 11))
+    list_k = list(range(1, 15))
 
     for k in list_k:
-        em = GaussianMixture(n_components=k, n_init=10, max_iter=500, random_state=0)
+        em = GaussianMixture(n_components=k, n_init=10)
         em.fit(X)
         bic.append(em.bic(X_scaled))
         aic.append(em.aic(X_scaled))
@@ -72,21 +75,22 @@ def em_1(X_scaled):
     plt.legend()
     plt.xlabel('Number of clusters')
     plt.ylabel('Information Criterion')
-    plt.savefig('em_elbow-1.png')
+    filename = 'EM_elbow_' + dataset + '.png'
+    plt.savefig(filename)
     plt.clf()
 
 
-def kmeans_scores(X_scaled, y):
+def kmeans_scores(X_scaled, y, dataset):
 
     km_scores = []
     km_silhouette = []
     vmeasure_score = []
     adjusted_rand = []
-    mutual_info_score = []
+    mutual_in_score = []
     homogenity = []
     completeness = []
 
-    list_k = list(range(2, 15))
+    list_k = list(range(2, 30))
     start = time.time()
 
     for i in list_k:
@@ -109,8 +113,8 @@ def kmeans_scores(X_scaled, y):
         adjusted_rand.append(ad_rand)
         print("Adjusted random score: {}".format(ad_rand))
 
-        mutual_info = adjusted_mutual_info_score(y, preds)
-        mutual_info_score.append(mutual_info)
+        mutual_info = mutual_info_score(y, preds)
+        mutual_in_score.append(mutual_info)
         print("Adjusted mutual info score : {}".format(mutual_info))
 
         homo = homogeneity_score(y, preds)
@@ -137,42 +141,35 @@ def kmeans_scores(X_scaled, y):
     plt.style.use('seaborn')
     plt.plot(list_k, km_silhouette, '-o', label='Silhouette score')
     plt.plot(list_k, adjusted_rand, '-o', label='Adjusted Random score')
-    plt.plot(list_k, mutual_info_score, '-o', label='Adjusted Mutual Info score')
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Metrics score')
-    plt.legend()
-    plt.savefig('Optimal_k_1.png')
-    plt.clf()
-
-    plt.style.use('seaborn')
+    plt.plot(list_k, mutual_in_score, '-o', label='Mutual Info score')
     plt.plot(list_k, homogenity, '-o', label='Homogenity score')
     plt.plot(list_k, completeness, '-o', label='Completeness score')
     plt.plot(list_k, vmeasure_score, '-o', label='V-measure score')
     plt.xlabel('Number of clusters')
     plt.ylabel('Metrics score')
     plt.legend()
-    plt.savefig('Cluster_quality_1.png')
+    filename = 'KM_metrics_' + dataset + '.png'
+    plt.savefig(filename)
     plt.clf()
 
 
-
-def em_scores(X_scaled, y):
+def em_scores(X_scaled, y, dataset):
 
     em_silhouette = []
     vmeasure_score = []
     adjusted_rand = []
-    mutual_info_score = []
+    mutual_in_score = []
     homogenity = []
     completeness = []
 
-    list_k = list(range(2, 15))
+    list_k = list(range(2, 30))
 
     start = time.time()
 
     for i in list_k:
         i_start = time.time()
         print("CLUSTER :", i)
-        em = GaussianMixture(n_components=i, n_init=10, max_iter=500, random_state=0).fit(X_scaled)
+        em = GaussianMixture(n_components=i, n_init=10).fit(X_scaled)
         preds = em.predict(X_scaled)
 
         silhouette = silhouette_score(X_scaled, preds)
@@ -183,9 +180,9 @@ def em_scores(X_scaled, y):
         adjusted_rand.append(ad_rand)
         print("Adjusted random score : {}".format(ad_rand))
 
-        mutual_info = adjusted_mutual_info_score(y, preds)
-        mutual_info_score.append(mutual_info)
-        print("Adjusted mutual info score : {}".format(ad_rand))
+        mutual_info = mutual_info_score(y, preds)
+        mutual_in_score.append(mutual_info)
+        print("Adjusted mutual info score : {}".format(mutual_info))
 
         homo = homogeneity_score(y, preds)
         homogenity.append(homo)
@@ -214,46 +211,74 @@ def em_scores(X_scaled, y):
     plt.style.use('seaborn')
     plt.plot(list_k, em_silhouette, '-o', label='Silhouette score')
     plt.plot(list_k, adjusted_rand, '-o', label='Adjusted Random score')
-    plt.plot(list_k, mutual_info_score, '-o', label='Adjusted Mutual Info score')
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Metrics score')
-    plt.legend()
-    plt.savefig('EM-Optimal_k_1.png')
-    plt.clf()
-
-    plt.style.use('seaborn')
+    plt.plot(list_k, mutual_in_score, '-o', label='Mutual Info score')
     plt.plot(list_k, homogenity, '-o', label='Homogenity score')
     plt.plot(list_k, completeness, '-o', label='Completeness score')
     plt.plot(list_k, vmeasure_score, '-o', label='V-measure score')
     plt.xlabel('Number of clusters')
     plt.ylabel('Metrics score')
     plt.legend()
-    plt.savefig('EM-Cluster_quality_1.png')
+    filename = 'EM_metrics_' + dataset + '.png'
+    plt.savefig(filename)
     plt.clf()
 
 
+def km_plot(X, n, dataset):
 
-def km_plot(X):
-
-    km = KMeans(n_clusters=5, n_init=20, max_iter=500, random_state=0)
+    km = KMeans(n_clusters=n)
     y_kmeans = km.fit_predict(X)
 
-    plt.scatter(X[:, 0], X[:, 1], c=y_kmeans, cmap='rainbow')
-    plt.show()
+    plt.title('KM Clustering, 2', fontsize=12, y=1.03)
 
+    plt.scatter(X[:, 0], X[:, 1], s=50, c=y_kmeans, cmap='rainbow')
+    filename = 'KM_scatter_' + dataset + '.png'
+    plt.savefig(filename)
+    plt.clf()
+
+
+def em_plot(X, n, dataset):
+
+    em = GaussianMixture(n_components=n, n_init=10)
+    y_kmeans = em.fit_predict(X)
+
+    plt.title('EM Clustering, 3', fontsize=12, y=1.03)
+
+    plt.scatter(X[:, 0], X[:, 1], s=50, c=y_kmeans, cmap='rainbow')
+    filename = 'EM_scatter_' + dataset + '.png'
+    plt.savefig(filename)
+    plt.clf()
 
 
 if __name__ == "__main__":
-    X_train, X_test, y_train, y_test, X, y = load_wave_data()
+
+    print('----------Waveform Data----------')
+    X, y = load_wave_data()
 
     scaler = MinMaxScaler()
-
     X_scaled = scaler.fit_transform(X)
 
-    km_plot(X_scaled)
+    kmeans_elbow(X_scaled, '1')
+    kmeans_scores(X_scaled, y, '1')
+    km_plot(X_scaled, 2, '1')
 
-    # kmeans_1(X_scaled)
-    # em_1(X)
+    em_elbow(X, '1')
+    em_scores(X, y, '1')
+    em_plot(X_scaled, 3, '1')
 
-    # kmeans_scores(X_scaled, y)
-    # em_scores(X, y)
+    print('----------Vehicle Data----------')
+
+    X, y = load_vehicle_data()
+
+    scaler = MinMaxScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    kmeans_elbow(X_scaled, '2')
+    kmeans_scores(X_scaled, y, '2')
+    km_plot(X_scaled, 2,  '2')
+
+    em_elbow(X, '2')
+    em_scores(X, y, '2')
+    em_plot(X_scaled, 2, '2')
+
+
+

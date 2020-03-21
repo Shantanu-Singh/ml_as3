@@ -226,7 +226,7 @@ def tsvd_mlp(X, y):
                               solver='adam',
                               random_state=0)
 
-    title = 'Learning curve for TruncatedSVD + MLP Classifier on Wave Data'
+    title = 'Learning curve for Truncated SVD + MLP Classifier on Wave Data'
 
     print("Plotting", title)
 
@@ -349,60 +349,97 @@ def em_mlp(X, y):
 
 def plot_accuracy(X_train, X_test, y_train, y_test):
 
+    accuracy_list = []
+    models = [
+        'MLP Base',
+        'PCA + MLP',
+        'ICA + MLP',
+        'RP + MLP',
+        'TSVD + MLP',
+        'KM + MLP',
+        'EM + MLP',
+    ]
+
     model = MLPClassifier(hidden_layer_sizes=(40,),
                                   max_iter=10000,
                                   activation='relu',
                                   solver='adam',
                                   random_state=0)
     model.fit(X_train, y_train)
-    print("MLP base accuracy : ", model.score(X_test, y_test))
+    score = model.score(X_test, y_test)
+    accuracy_list.append(score)
+    print("MLP base accuracy : ", score)
 
     pca = PCA(n_components=19)
     X_pca_train = pca.fit_transform(X_train)
     X_pca_test = pca.fit_transform(X_test)
-
     model.fit(X_pca_train, y_train)
-    print("PCA + MLP accuracy : ", model.score(X_pca_test, y_test))
+    score = model.score(X_pca_test, y_test)
+    accuracy_list.append(score)
+    print("PCA + MLP accuracy : ", score)
 
     ica = FastICA(n_components=15, max_iter=10000, tol=0.01)
     X_ica_train = ica.fit_transform(X_train)
     X_ica_test = ica.fit_transform(X_test)
-
     model.fit(X_ica_train, y_train)
-    print("ICA + MLP accuracy : ", model.score(X_ica_test, y_test))
+    score = model.score(X_ica_test, y_test)
+    accuracy_list.append(score)
+    print("ICA + MLP accuracy : ", score)
 
     rp = GaussianRandomProjection(n_components=21)
     X_rp_train = rp.fit_transform(X_train)
     X_rp_test = rp.fit_transform(X_test)
-
     model.fit(X_rp_train, y_train)
-    print("RP + MLP accuracy : ", model.score(X_rp_test, y_test))
+    score = model.score(X_rp_test, y_test)
+    accuracy_list.append(score)
+    print("RP + MLP accuracy : ", score)
 
     tsvd = TruncatedSVD(n_components=20)
     X_tsvd_train = tsvd.fit_transform(X_train)
     X_tsvd_test = tsvd.fit_transform(X_test)
-
     model.fit(X_tsvd_train, y_train)
-    print("TSVD + MLP accuracy : ", model.score(X_tsvd_test, y_test))
+    score = model.score(X_tsvd_test, y_test)
+    accuracy_list.append(score)
+    print("TSVD + MLP accuracy : ", score)
 
     kmeans = KMeans(n_clusters=2)
     X_km_train = kmeans.fit_transform(X_train)
     X_km_test = kmeans.fit_transform(X_test)
-
     model.fit(X_km_train, y_train)
-    print("KM + MLP accuracy : ", model.score(X_km_test, y_test))
+    score = model.score(X_km_test, y_test)
+    accuracy_list.append(score)
+    print("KM + MLP accuracy : ", score)
 
     em = GaussianMixture(n_components=4, n_init=10, max_iter=500, random_state=0).fit(X)
     X_em_train = em.predict_proba(X_train)
     X_em_test = em.predict_proba(X_test)
-
     model.fit(X_em_train, y_train)
-    print("EM + MLP accuracy : ", model.score(X_em_test, y_test))
+    score = model.score(X_em_test, y_test)
+    accuracy_list.append(score)
+    print("EM + MLP accuracy : ", score)
+
+    # Plot
+    plt.figure(figsize=(12, 8))
+    plt.barh(models, accuracy_list)
+    plt.title('Accuracy Comparison')
+    plt.xlabel('Accuracy', fontsize=14)
+    plt.legend()
+    plt.savefig('Accuracy_chart.png')
+    plt.clf()
 
 
 def plot_time(X, y):
 
     times = []
+    models = [
+        'MLP Base',
+        'PCA + MLP',
+        'ICA + MLP',
+        'RP + MLP',
+        'TSVD + MLP',
+        'KM + MLP',
+        'EM + MLP',
+    ]
 
     times.append(base_mlp(X, y))
     times.append(pca_mlp(X, y))
@@ -411,6 +448,17 @@ def plot_time(X, y):
     times.append(tsvd_mlp(X, y))
     times.append(km_mlp(X, y))
     times.append(em_mlp(X, y))
+
+    # Plot
+    plt.figure(figsize=(12, 8))
+    plt.barh(models, times)
+    plt.title('Time Comparison')
+    plt.xlabel('Time Taken', fontsize=14)
+    plt.legend()
+    plt.savefig('Time_chart.png')
+    plt.clf()
+
+
 
 
 
@@ -426,6 +474,7 @@ if __name__ == "__main__":
     plot_time(X_scaled, y)
 
     plot_accuracy(X_train_scaled, X_test_scaled, y_train, y_test)
+
 
 
 
